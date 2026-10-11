@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package campus;
+
+service DepartmentService {
+  rpc SearchResource(SearchRequest) returns (ResourceList);
+  rpc GetHealth(Empty) returns (HealthResponse);
+  rpc TriggerElection(ElectionRequest) returns (ElectionResponse);
+}
+
+message Empty {}
+
+message SearchRequest {
+  string name = 1;
+}
+
+message ResourceItem {
+  string resourceId = 1;
+  string name = 2;
+  string category = 3;
+  string description = 4;
+  string department = 5;
+  string laboratory = 6;
+  int32 totalQuantity = 7;
+  int32 availableQuantity = 8;
+  int32 reservedQuantity = 9;
+  int32 borrowedQuantity = 10;
+  string condition = 11;
+  string imageUrl = 12;
+  string manualUrl = 13;
+  string tutorialVideoUrl = 14;
+  string createdAt = 15;
+  string updatedAt = 16;
+}
+
+message ResourceList {
+  repeated ResourceItem resources = 1;
+}
+
+message HealthResponse {
+  string status = 1;
+  string department = 2;
+  string nodeId = 3;
+}
+
+message ElectionRequest {
+  string initiator = 1;
+}
+
+message ElectionResponse {
+  string winner = 1;
+  string department = 2;
+  bool success = 3;
+}

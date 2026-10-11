@@ -1,0 +1,253 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "5174:5173"
+    environment:
+      GATEWAY_URL: http://gateway:4000
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - campus-net
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    ports:
+      - "4001:4000"
+    environment:
+      PORT: 4000
+      JWT_SECRET: ${JWT_SECRET:-change-me}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-campus-share-local-internal-token}
+      ADMIN_REGISTRATION_KEY: ${ADMIN_REGISTRATION_KEY:-}
+      GATEWAY_PORT: 4000
+      AUTH_MONGO_URI: mongodb://mongo-auth:27017/campus_share_auth
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      CS_SERVICE_URL: http://cs-service:5001
+      IT_SERVICE_URL: http://it-service:5002
+      ENTC_SERVICE_URL: http://entc-service:5003
+      CS_GRPC_ADDRESS: cs-service:6001
+      IT_GRPC_ADDRESS: it-service:6002
+      ENTC_GRPC_ADDRESS: entc-service:6003
+      CS_GRPC_PORT: 6001
+      IT_GRPC_PORT: 6002
+      ENTC_GRPC_PORT: 6003
+    depends_on:
+      mongo-auth:
+        condition: service_healthy
+      cs-service:
+        condition: service_started
+      it-service:
+        condition: service_started
+      entc-service:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    networks:
+      - campus-net
+
+  cs-service:
+    build:
+      context: .
+      dockerfile: services/cs/Dockerfile
+    environment:
+      CS_PORT: 5001
+      CS_GRPC_PORT: 6001
+      GATEWAY_PORT: 4000
+      GATEWAY_INTERNAL_URL: http://gateway:4000
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-campus-share-local-internal-token}
+      CS_SERVICE_URL: http://cs-service:5001
+      IT_SERVICE_URL: http://it-service:5002
+      ENTC_SERVICE_URL: http://entc-service:5003
+      ELECTION_MONITOR_INTERVAL_MS: ${ELECTION_MONITOR_INTERVAL_MS:-5000}
+      HEARTBEAT_INTERVAL_MS: ${HEARTBEAT_INTERVAL_MS:-5000}
+      CS_MONGO_URI: mongodb://mongo-cs:27017/campus_share_cs
+      OUTBOX_POLL_INTERVAL_MS: ${OUTBOX_POLL_INTERVAL_MS:-1000}
+      OUTBOX_LEASE_MS: ${OUTBOX_LEASE_MS:-30000}
+      OUTBOX_RETRY_BASE_MS: ${OUTBOX_RETRY_BASE_MS:-1000}
+      OUTBOX_RETRY_MAX_MS: ${OUTBOX_RETRY_MAX_MS:-60000}
+      OUTBOX_PUBLISH_TIMEOUT_MS: ${OUTBOX_PUBLISH_TIMEOUT_MS:-1000}
+      OUTBOX_CONFIRM_TIMEOUT_MS: ${OUTBOX_CONFIRM_TIMEOUT_MS:-5000}
+      OUTBOX_RELAY_TIMEOUT_MS: ${OUTBOX_RELAY_TIMEOUT_MS:-1500}
+      OUTBOX_COMPLETED_RETENTION_MS: ${OUTBOX_COMPLETED_RETENTION_MS:-604800000}
+      OUTBOX_BATCH_SIZE: ${OUTBOX_BATCH_SIZE:-10}
+      OUTBOX_MAX_ENTRIES_PER_RESOURCE: ${OUTBOX_MAX_ENTRIES_PER_RESOURCE:-500}
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      mongo-cs:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5001/internal/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    networks:
+      - campus-net
+
+  it-service:
+    build:
+      context: .
+      dockerfile: services/it/Dockerfile
+    environment:
+      IT_PORT: 5002
+      IT_GRPC_PORT: 6002
+      GATEWAY_PORT: 4000
+      GATEWAY_INTERNAL_URL: http://gateway:4000
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-campus-share-local-internal-token}
+      CS_SERVICE_URL: http://cs-service:5001
+      IT_SERVICE_URL: http://it-service:5002
+      ENTC_SERVICE_URL: http://entc-service:5003
+      ELECTION_MONITOR_INTERVAL_MS: ${ELECTION_MONITOR_INTERVAL_MS:-5000}
+      HEARTBEAT_INTERVAL_MS: ${HEARTBEAT_INTERVAL_MS:-5000}
+      IT_MONGO_URI: mongodb://mongo-it:27017/campus_share_it
+      OUTBOX_POLL_INTERVAL_MS: ${OUTBOX_POLL_INTERVAL_MS:-1000}
+      OUTBOX_LEASE_MS: ${OUTBOX_LEASE_MS:-30000}
+      OUTBOX_RETRY_BASE_MS: ${OUTBOX_RETRY_BASE_MS:-1000}
+      OUTBOX_RETRY_MAX_MS: ${OUTBOX_RETRY_MAX_MS:-60000}
+      OUTBOX_PUBLISH_TIMEOUT_MS: ${OUTBOX_PUBLISH_TIMEOUT_MS:-1000}
+      OUTBOX_CONFIRM_TIMEOUT_MS: ${OUTBOX_CONFIRM_TIMEOUT_MS:-5000}
+      OUTBOX_RELAY_TIMEOUT_MS: ${OUTBOX_RELAY_TIMEOUT_MS:-1500}
+      OUTBOX_COMPLETED_RETENTION_MS: ${OUTBOX_COMPLETED_RETENTION_MS:-604800000}
+      OUTBOX_BATCH_SIZE: ${OUTBOX_BATCH_SIZE:-10}
+      OUTBOX_MAX_ENTRIES_PER_RESOURCE: ${OUTBOX_MAX_ENTRIES_PER_RESOURCE:-500}
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      mongo-it:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5002/internal/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    networks:
+      - campus-net
+
+  entc-service:
+    build:
+      context: .
+      dockerfile: services/entc/Dockerfile
+    environment:
+      ENTC_PORT: 5003
+      ENTC_GRPC_PORT: 6003
+      GATEWAY_PORT: 4000
+      GATEWAY_INTERNAL_URL: http://gateway:4000
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-campus-share-local-internal-token}
+      CS_SERVICE_URL: http://cs-service:5001
+      IT_SERVICE_URL: http://it-service:5002
+      ENTC_SERVICE_URL: http://entc-service:5003
+      ELECTION_MONITOR_INTERVAL_MS: ${ELECTION_MONITOR_INTERVAL_MS:-5000}
+      HEARTBEAT_INTERVAL_MS: ${HEARTBEAT_INTERVAL_MS:-5000}
+      ENTC_MONGO_URI: mongodb://mongo-entc:27017/campus_share_entc
+      OUTBOX_POLL_INTERVAL_MS: ${OUTBOX_POLL_INTERVAL_MS:-1000}
+      OUTBOX_LEASE_MS: ${OUTBOX_LEASE_MS:-30000}
+      OUTBOX_RETRY_BASE_MS: ${OUTBOX_RETRY_BASE_MS:-1000}
+      OUTBOX_RETRY_MAX_MS: ${OUTBOX_RETRY_MAX_MS:-60000}
+      OUTBOX_PUBLISH_TIMEOUT_MS: ${OUTBOX_PUBLISH_TIMEOUT_MS:-1000}
+      OUTBOX_CONFIRM_TIMEOUT_MS: ${OUTBOX_CONFIRM_TIMEOUT_MS:-5000}
+      OUTBOX_RELAY_TIMEOUT_MS: ${OUTBOX_RELAY_TIMEOUT_MS:-1500}
+      OUTBOX_COMPLETED_RETENTION_MS: ${OUTBOX_COMPLETED_RETENTION_MS:-604800000}
+      OUTBOX_BATCH_SIZE: ${OUTBOX_BATCH_SIZE:-10}
+      OUTBOX_MAX_ENTRIES_PER_RESOURCE: ${OUTBOX_MAX_ENTRIES_PER_RESOURCE:-500}
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+    depends_on:
+      mongo-entc:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5003/internal/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    networks:
+      - campus-net
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    networks:
+      - campus-net
+
+  mongo-auth:
+    image: mongo:7
+    ports:
+      - '27017:27017'
+    volumes:
+      - auth-db-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+    - campus-net
+
+  mongo-cs:
+    image: mongo:7
+    volumes:
+      - cs-db-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - campus-net
+
+  mongo-it:
+    image: mongo:7
+    volumes:
+      - it-db-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - campus-net
+
+  mongo-entc:
+    image: mongo:7
+    volumes:
+      - entc-db-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - campus-net
+
+volumes:
+  auth-db-data:
+  cs-db-data:
+  it-db-data:
+  entc-db-data:
+
+networks:
+  campus-net:
+    name: campus-net
+    driver: bridge

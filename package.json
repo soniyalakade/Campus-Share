@@ -1,0 +1,35 @@
+{
+  "name": "campus-share",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "gateway": "node gateway/server.js",
+    "cs": "node services/cs/server.js",
+    "it": "node services/it/server.js",
+    "entc": "node services/entc/server.js",
+    "frontend": "npm --prefix frontend run dev -- --host 0.0.0.0",
+    "test": "vitest run --passWithNoTests",
+    "lint": "node --check gateway/server.js && node --check services/cs/server.js && node --check services/it/server.js && node --check services/entc/server.js"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.12.6",
+    "@grpc/proto-loader": "^0.7.13",
+    "amqplib": "^0.10.5",
+    "axios": "^1.7.9",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.8.2",
+    "uuid": "^11.0.2",
+    "ws": "^8.1.0"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0",
+    "vitest": "^2.1.8"
+  }
+}
